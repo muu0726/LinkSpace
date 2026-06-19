@@ -6,7 +6,7 @@ import { SearchBar } from "@/components/properties/SearchBar";
 export default async function Home({
   searchParams,
 }: {
-  searchParams: { [key: string]: string | string[] | undefined }
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
   // searchParamsからキーワードなどを抽出（Next.js 14以下での一般的な取得方法。15の場合はawait searchParamsが必要な場合がある）
   // 念のため await searchParams をする (Next.js 15対応)

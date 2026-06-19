@@ -98,7 +98,7 @@ export function PropertyForm({ initialData }: { initialData?: any }) {
             if (userError || !userData.user) throw new Error("ユーザー情報の取得に失敗しました。ログインし直してください。");
 
             const userId = userData.user.id;
-            const tagsArray = tagsText.split(',').map(tag => tag.trim()).filter(tag => tag !== "");
+            const tagsArray = tagsText.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag !== "");
 
             let propertyId = initialData?.id;
 

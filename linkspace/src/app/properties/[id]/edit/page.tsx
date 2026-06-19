@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { PropertyForm } from "@/components/properties/PropertyForm";
 
-export default async function PropertyEditPage({ params }: { params: { id: string } }) {
+export default async function PropertyEditPage({ params }: { params: Promise<{ id: string }> }) {
     const resolvedParams = await params;
     const propertyId = resolvedParams.id;
 

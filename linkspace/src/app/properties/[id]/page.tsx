@@ -4,7 +4,7 @@ import { MapPin, Tag, ShieldAlert, User, Eye } from "lucide-react";
 import { PropertyCalendar } from "@/components/properties/PropertyCalendar";
 import { FavoriteButton } from "@/components/properties/FavoriteButton";
 
-export default async function PropertyDetailPage({ params }: { params: { id: string } }) {
+export default async function PropertyDetailPage({ params }: { params: Promise<{ id: string }> }) {
     // URLの[id]がPromiseとして渡される場合があるのでawaitする（Next.js 15仕様対策）
     const resolvedParams = await params;
     const propertyId = resolvedParams.id;
@@ -12,7 +12,8 @@ export default async function PropertyDetailPage({ params }: { params: { id: str
     const supabase = await createClient();
 
     // PVカウントの増加 (エラーが出ても画面表示は止めない)
-    await supabase.rpc('increment_page_view', { property_id_param: propertyId }).catch(e => console.error("PVカウントエラー:", e));
+    const { error: rpcError } = await supabase.rpc('increment_page_view', { property_id_param: propertyId });
+    if (rpcError) console.error("PVカウントエラー:", rpcError);
 
     // 物件データの取得 (画像と不可日をJOIN)
     const { data: property, error } = await supabase
@@ -175,6 +176,7 @@ export default async function PropertyDetailPage({ params }: { params: { id: str
                 {/* 右側: 予約カレンダー（サイドバー） */}
                 <div className="lg:col-span-1 relative">
                     <PropertyCalendar 
+                        propertyId={property.id}
                         pricePerDay={property.price_per_day} 
                         unavailabilities={property.unavailabilities || []} 
                     />

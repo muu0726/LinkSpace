@@ -4,7 +4,7 @@ import { CalendarEditor } from "@/components/properties/CalendarEditor";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 
-export default async function PropertyCalendarEditPage({ params }: { params: { id: string } }) {
+export default async function PropertyCalendarEditPage({ params }: { params: Promise<{ id: string }> }) {
     const resolvedParams = await params;
     const propertyId = resolvedParams.id;
 

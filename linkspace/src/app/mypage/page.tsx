@@ -1,14 +1,15 @@
 "use client";
 
 import { useEffect, useState, FormEvent } from "react";
-import { getUserProfile, updateUserProfile, deleteUserAccount } from "@/app/actions/user";
+import { getUserProfile, updateUserProfile, deleteUserAccount, getUserTransactions } from "@/app/actions/user";
 import { Button } from "@/components/ui/button";
 import { PropertyCard } from "@/components/properties/PropertyCard";
 
 export default function MyPage() {
-    const [activeTab, setActiveTab] = useState<"profile" | "favorites" | "properties">("profile");
-    const [profile, setProfile] = useState<{ name?: string } | null>(null);
+    const [activeTab, setActiveTab] = useState<"profile" | "favorites" | "properties" | "points">("profile");
+    const [profile, setProfile] = useState<{ name?: string; points_balance?: number } | null>(null);
     const [favorites, setFavorites] = useState<any[]>([]);
+    const [transactions, setTransactions] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState("");
@@ -78,6 +79,10 @@ export default function MyPage() {
             const res = await getUserProfile();
             if (res.success && res.data) {
                 setProfile(res.data);
+            }
+            const txRes = await getUserTransactions();
+            if (txRes.success && txRes.data) {
+                setTransactions(txRes.data);
             }
             await getFavorites();
             await getOwnedProperties();
@@ -152,11 +157,33 @@ export default function MyPage() {
                 >
                     登録した物件 (ホスト)
                 </button>
+                <button
+                    onClick={() => setActiveTab("points")}
+                    className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 whitespace-nowrap ${
+                        activeTab === "points" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+                    }`}
+                >
+                    ポイント履歴
+                </button>
             </div>
 
             {/* コンテンツ: プロフィール */}
             {activeTab === "profile" && (
                 <div className="max-w-2xl space-y-8">
+                    
+                    {/* LP残高表示 */}
+                    <div className="rounded-xl border border-primary/20 bg-primary/5 p-6 shadow-sm flex items-center justify-between">
+                        <div>
+                            <h2 className="text-sm font-medium text-muted-foreground mb-1">現在の保有ポイント</h2>
+                            <div className="text-3xl font-bold text-primary">
+                                {profile?.points_balance?.toLocaleString() || 0} <span className="text-lg">LP</span>
+                            </div>
+                        </div>
+                        <Button variant="outline" onClick={() => setActiveTab("points")}>
+                            履歴を見る
+                        </Button>
+                    </div>
+
                     <div className="rounded-xl border bg-card p-6 shadow-sm">
                         <h2 className="text-xl font-semibold mb-4">プロフィール編集</h2>
                         <form onSubmit={handleUpdate} className="space-y-4">
@@ -268,6 +295,82 @@ export default function MyPage() {
                                     </div>
                                 </div>
                             ))}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* コンテンツ: ポイント履歴 */}
+            {activeTab === "points" && (
+                <div className="max-w-3xl space-y-6">
+                    <div className="rounded-xl border border-primary/20 bg-primary/5 p-6 mb-8 flex items-center justify-between">
+                        <div>
+                            <h2 className="text-sm font-medium text-muted-foreground mb-1">現在の保有ポイント</h2>
+                            <div className="text-3xl font-bold text-primary">
+                                {profile?.points_balance?.toLocaleString() || 0} <span className="text-lg">LP</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h2 className="text-xl font-semibold">取引履歴</h2>
+                    
+                    {transactions.length === 0 ? (
+                        <div className="text-center py-12 text-muted-foreground border border-dashed rounded-xl bg-muted/20">
+                            取引履歴はありません。
+                        </div>
+                    ) : (
+                        <div className="rounded-xl border bg-card overflow-hidden">
+                            <table className="w-full text-sm text-left">
+                                <thead className="bg-muted text-muted-foreground">
+                                    <tr>
+                                        <th className="px-4 py-3 font-medium">日時</th>
+                                        <th className="px-4 py-3 font-medium">種別</th>
+                                        <th className="px-4 py-3 font-medium">金額 (LP)</th>
+                                        <th className="px-4 py-3 font-medium">詳細</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y">
+                                    {transactions.map((tx) => {
+                                        const isPositive = tx.amount > 0;
+                                        
+                                        // 種別のラベル表示用
+                                        let typeLabel = tx.type;
+                                        switch(tx.type) {
+                                            case 'initial_grant': typeLabel = '初期付与'; break;
+                                            case 'payment_escrow': typeLabel = '予約支払 (預かり)'; break;
+                                            case 'escrow_release': typeLabel = '預かり解放'; break;
+                                            case 'refund': typeLabel = 'キャンセル返金'; break;
+                                            case 'reward': typeLabel = 'ホスト報酬'; break;
+                                            case 'manual_adjustment': typeLabel = 'システム調整'; break;
+                                        }
+
+                                        return (
+                                            <tr key={tx.id} className="hover:bg-muted/50 transition-colors">
+                                                <td className="px-4 py-3 text-muted-foreground">
+                                                    {new Date(tx.created_at).toLocaleDateString('ja-JP')} {new Date(tx.created_at).toLocaleTimeString('ja-JP', {hour: '2-digit', minute:'2-digit'})}
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <span className="bg-secondary px-2 py-1 rounded text-xs font-medium">
+                                                        {typeLabel}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-3 font-bold">
+                                                    <span className={isPositive ? "text-green-600" : "text-destructive"}>
+                                                        {isPositive ? "+" : ""}{tx.amount.toLocaleString()}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-3 text-muted-foreground">
+                                                    {tx.reservations?.properties?.title ? (
+                                                        <span className="line-clamp-1">{tx.reservations.properties.title}</span>
+                                                    ) : (
+                                                        <span>-</span>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
                         </div>
                     )}
                 </div>

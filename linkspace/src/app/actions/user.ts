@@ -78,3 +78,32 @@ export async function deleteUserAccount() {
 
     return { success: true };
 }
+
+export async function getUserTransactions() {
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+        return { success: false, error: "認証されていません" };
+    }
+
+    const { data, error } = await supabase
+        .from("transactions")
+        .select(`
+            *,
+            reservations (
+                start_date,
+                end_date,
+                property_id,
+                properties (title)
+            )
+        `)
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+    if (error) {
+        return { success: false, error: error.message };
+    }
+
+    return { success: true, data };
+}
