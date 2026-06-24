@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
-import { ImagePlus, X, Loader2 } from "lucide-react";
+import { ImagePlus, X, Loader2, Sparkles } from "lucide-react";
 
 export function PropertyForm({ initialData }: { initialData?: any }) {
     const router = useRouter();
@@ -24,6 +24,11 @@ export function PropertyForm({ initialData }: { initialData?: any }) {
     const [tagsText, setTagsText] = useState(initialData?.tags?.join(", ") || "");
     const [rules, setRules] = useState(initialData?.rules || "");
     const [isPublished, setIsPublished] = useState<boolean>(initialData ? initialData.is_published : true);
+    
+    // AI生成用状態
+    const [aiKeywords, setAiKeywords] = useState("");
+    const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
+    const [isGeneratingRules, setIsGeneratingRules] = useState(false);
     
     // 画像状態
     const [images, setImages] = useState<File[]>([]);
@@ -85,6 +90,53 @@ export function PropertyForm({ initialData }: { initialData?: any }) {
             console.error("削除エラー:", error);
             setMessage("削除に失敗しました: " + error.message);
             setLoading(false);
+        }
+    };
+
+    const handleGenerateAI = async (type: 'description' | 'rules') => {
+        if (type === 'description') setIsGeneratingDesc(true);
+        else setIsGeneratingRules(true);
+
+        try {
+            // 画像の1枚目をBase64化する（存在する場合）
+            let imageBase64 = "";
+            if (images.length > 0) {
+                const file = images[0];
+                imageBase64 = await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result as string);
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            const res = await fetch('/api/ai/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    type,
+                    title,
+                    address,
+                    tags: tagsText,
+                    keywords: aiKeywords,
+                    imageBase64
+                })
+            });
+
+            const data = await res.json();
+            if (!data.success) {
+                throw new Error(data.error || "生成に失敗しました");
+            }
+
+            if (type === 'description') {
+                setDescription(data.data);
+            } else {
+                setRules(data.data);
+            }
+        } catch (error: any) {
+            alert(error.message);
+        } finally {
+            if (type === 'description') setIsGeneratingDesc(false);
+            else setIsGeneratingRules(false);
         }
     };
 
@@ -224,8 +276,25 @@ export function PropertyForm({ initialData }: { initialData?: any }) {
                     <input required type="text" value={title} onChange={e => setTitle(e.target.value)} className="w-full rounded-md border p-2" placeholder="例: 富士山が見える広々キャンプ用地" />
                 </div>
 
+                <div className="bg-primary/5 p-4 rounded-lg border border-primary/20 space-y-3">
+                    <div className="flex items-center gap-2">
+                        <Sparkles className="w-5 h-5 text-primary" />
+                        <h3 className="font-bold text-primary">AI自動生成アシスト</h3>
+                    </div>
+                    <p className="text-xs text-muted-foreground">タイトルやタグ、画像からAIが物件紹介やルールを自動作成します。追加のキーワード（雰囲気など）があれば入力してください。</p>
+                    <div>
+                        <input type="text" value={aiKeywords} onChange={e => setAiKeywords(e.target.value)} className="w-full rounded-md border p-2 text-sm bg-background" placeholder="例: 静か, 水道なし, 星空が綺麗" />
+                    </div>
+                </div>
+
                 <div>
-                    <label className="block text-sm font-medium mb-1">説明 <span className="text-destructive">*</span></label>
+                    <div className="flex justify-between items-end mb-1">
+                        <label className="block text-sm font-medium">説明 <span className="text-destructive">*</span></label>
+                        <Button type="button" variant="outline" size="sm" className="h-8 text-xs bg-background" onClick={() => handleGenerateAI('description')} disabled={isGeneratingDesc}>
+                            {isGeneratingDesc ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Sparkles className="w-3 h-3 mr-1 text-primary" />}
+                            AIで説明を生成
+                        </Button>
+                    </div>
                     <textarea required value={description} onChange={e => setDescription(e.target.value)} rows={4} className="w-full rounded-md border p-2" placeholder="物件の特徴やアピールポイントを記入してください" />
                 </div>
 
@@ -246,7 +315,13 @@ export function PropertyForm({ initialData }: { initialData?: any }) {
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium mb-1">ルール・注意事項</label>
+                    <div className="flex justify-between items-end mb-1">
+                        <label className="block text-sm font-medium">ルール・注意事項</label>
+                        <Button type="button" variant="outline" size="sm" className="h-8 text-xs bg-background" onClick={() => handleGenerateAI('rules')} disabled={isGeneratingRules}>
+                            {isGeneratingRules ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Sparkles className="w-3 h-3 mr-1 text-primary" />}
+                            AIでルールを生成
+                        </Button>
+                    </div>
                     <textarea value={rules} onChange={e => setRules(e.target.value)} rows={3} className="w-full rounded-md border p-2" placeholder="例: 直火NG、ゴミは必ず持ち帰ること" />
                 </div>
 

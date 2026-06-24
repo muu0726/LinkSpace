@@ -2,14 +2,21 @@
 
 import { useEffect, useState, FormEvent } from "react";
 import { getUserProfile, updateUserProfile, deleteUserAccount, getUserTransactions } from "@/app/actions/user";
+import { getReservationsAsRenter, getReservationsAsHost, cancelReservation, approveReservation, rejectReservation, checkInReservation, checkOutReservation } from "@/app/actions/reservation";
+import { getNotifications, markAsRead } from "@/app/actions/notification";
 import { Button } from "@/components/ui/button";
 import { PropertyCard } from "@/components/properties/PropertyCard";
+import { Bell } from "lucide-react";
 
 export default function MyPage() {
-    const [activeTab, setActiveTab] = useState<"profile" | "favorites" | "properties" | "points">("profile");
+    const [activeTab, setActiveTab] = useState<"profile" | "favorites" | "properties" | "reservations" | "requests" | "points" | "notifications">("profile");
     const [profile, setProfile] = useState<{ name?: string; points_balance?: number } | null>(null);
+    const [notifications, setNotifications] = useState<any[]>([]);
+
     const [favorites, setFavorites] = useState<any[]>([]);
     const [transactions, setTransactions] = useState<any[]>([]);
+    const [myReservations, setMyReservations] = useState<any[]>([]);
+    const [hostRequests, setHostRequests] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState("");
@@ -86,6 +93,16 @@ export default function MyPage() {
             }
             await getFavorites();
             await getOwnedProperties();
+            
+            const resRenter = await getReservationsAsRenter();
+            if (resRenter.success) setMyReservations(resRenter.data || []);
+            
+            const resHost = await getReservationsAsHost();
+            if (resHost.success) setHostRequests(resHost.data || []);
+
+            const resNotif = await getNotifications();
+            if (resNotif.success) setNotifications(resNotif.data || []);
+
             setLoading(false);
         };
         fetchData();
@@ -119,6 +136,77 @@ export default function MyPage() {
             window.location.href = "/";
         } else {
             setMessage(`エラー: ${res.error}`);
+            setSaving(false);
+        }
+    };
+
+    const handleCancel = async (id: string) => {
+        if (!confirm("本当にキャンセルしますか？キャンセルポリシーに基づき返金されます。")) return;
+        setSaving(true);
+        const res = await cancelReservation(id);
+        if (res.success) {
+            alert("キャンセルしました。");
+            window.location.reload();
+        } else {
+            alert("エラー: " + res.error);
+            setSaving(false);
+        }
+    };
+
+    const handleCheckIn = async (id: string) => {
+        if (!confirm("現地に到着しましたか？チェックイン報告を行います。")) return;
+        setSaving(true);
+        const res = await checkInReservation(id);
+        if (res.success) {
+            alert("チェックインしました！利用ガイド等をご確認ください。");
+            window.location.reload();
+        } else {
+            alert("エラー: " + res.error);
+            setSaving(false);
+        }
+    };
+
+    const handleCheckOut = async (id: string) => {
+        if (!confirm("利用を完了し、退出しましたか？チェックアウト報告と決済を行います。")) return;
+        setSaving(true);
+        const res = await checkOutReservation(id);
+        if (res.success) {
+            alert("チェックアウトが完了しました！ご利用ありがとうございました。");
+            window.location.reload();
+        } else {
+            alert("エラー: " + res.error);
+            setSaving(false);
+        }
+    };
+
+    const handleMarkAsRead = async (id: string, url?: string) => {
+        await markAsRead(id);
+        if (url) window.location.href = url;
+        else window.location.reload();
+    };
+
+    const handleApprove = async (id: string) => {
+        if (!confirm("このリクエストを承認しますか？エスクロー決済が実行されます。")) return;
+        setSaving(true);
+        const res = await approveReservation(id);
+        if (res.success) {
+            alert("承認しました。");
+            window.location.reload();
+        } else {
+            alert("エラー: " + res.error);
+            setSaving(false);
+        }
+    };
+
+    const handleReject = async (id: string) => {
+        if (!confirm("このリクエストを却下しますか？")) return;
+        setSaving(true);
+        const res = await rejectReservation(id);
+        if (res.success) {
+            alert("却下しました。");
+            window.location.reload();
+        } else {
+            alert("エラー: " + res.error);
             setSaving(false);
         }
     };
@@ -158,12 +246,42 @@ export default function MyPage() {
                     登録した物件 (ホスト)
                 </button>
                 <button
+                    onClick={() => setActiveTab("reservations")}
+                    className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 whitespace-nowrap ${
+                        activeTab === "reservations" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+                    }`}
+                >
+                    予約・利用履歴
+                </button>
+                <button
+                    onClick={() => setActiveTab("requests")}
+                    className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 whitespace-nowrap ${
+                        activeTab === "requests" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+                    }`}
+                >
+                    リクエスト管理
+                </button>
+                <button
                     onClick={() => setActiveTab("points")}
                     className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 whitespace-nowrap ${
                         activeTab === "points" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
                     }`}
                 >
                     ポイント履歴
+                </button>
+                <button
+                    onClick={() => setActiveTab("notifications")}
+                    className={`px-4 py-2 font-medium text-sm transition-colors border-b-2 whitespace-nowrap flex items-center gap-1 ${
+                        activeTab === "notifications" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
+                    }`}
+                >
+                    <Bell size={16} />
+                    通知
+                    {notifications.filter(n => !n.is_read).length > 0 && (
+                        <span className="bg-destructive text-white text-[10px] px-1.5 py-0.5 rounded-full ml-1">
+                            {notifications.filter(n => !n.is_read).length}
+                        </span>
+                    )}
                 </button>
             </div>
 
@@ -300,6 +418,111 @@ export default function MyPage() {
                 </div>
             )}
 
+            {/* コンテンツ: 予約・利用履歴 (借り手) */}
+            {activeTab === "reservations" && (
+                <div>
+                    <h2 className="text-xl font-semibold mb-6">予約・利用履歴</h2>
+                    {myReservations.length === 0 ? (
+                        <div className="text-center py-12 text-muted-foreground border border-dashed rounded-xl bg-muted/20">
+                            現在予約している物件はありません。
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            {myReservations.map(res => (
+                                <div key={res.id} className="p-4 border rounded-xl bg-card flex flex-col md:flex-row gap-4 items-center justify-between">
+                                    <div>
+                                        <h3 className="font-bold">{res.properties?.title || '不明な物件'}</h3>
+                                        <p className="text-sm text-muted-foreground">
+                                            {res.start_date} 〜 {res.end_date}
+                                        </p>
+                                        <p className="text-sm font-semibold text-primary mt-1">合計: {res.total_price.toLocaleString()} LP</p>
+                                        <div className="mt-2">
+                                            <span className="px-2 py-1 text-xs rounded bg-secondary/50 font-medium border border-border">
+                                                ステータス: {res.status === 'pending' ? 'リクエスト中' : res.status === 'approved' ? '予約確定 (エスクロー中)' : res.status === 'completed' ? '利用完了' : res.status === 'cancelled' ? 'キャンセル済' : '却下済'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col gap-2 min-w-[140px]">
+                                        {(res.status === 'pending' || res.status === 'approved') && (
+                                            <Button variant="outline" size="sm" onClick={() => handleCancel(res.id)} disabled={saving} className="text-destructive border-destructive/50 hover:bg-destructive/10">
+                                                キャンセルする
+                                            </Button>
+                                        )}
+                                        {res.status === 'approved' && !res.check_in_at && (
+                                            <Button variant="default" size="sm" onClick={() => handleCheckIn(res.id)} disabled={saving}>
+                                                チェックイン
+                                            </Button>
+                                        )}
+                                        {res.status === 'approved' && res.check_in_at && !res.check_out_at && (
+                                            <Button variant="default" size="sm" onClick={() => handleCheckOut(res.id)} disabled={saving} className="bg-amber-600 hover:bg-amber-700">
+                                                チェックアウト
+                                            </Button>
+                                        )}
+                                        {(res.status === 'approved' || res.status === 'completed') && (
+                                            <Button variant="outline" size="sm" asChild>
+                                                <a href={`/properties/${res.property_id}/guide`} className="text-blue-600 border-blue-200 hover:bg-blue-50">
+                                                    利用ガイドを見る
+                                                </a>
+                                            </Button>
+                                        )}
+                                        <Button variant="secondary" size="sm" asChild>
+                                            <a href={`/properties/${res.property_id}`}>物件を見る</a>
+                                        </Button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* コンテンツ: リクエスト管理 (貸し手) */}
+            {activeTab === "requests" && (
+                <div>
+                    <h2 className="text-xl font-semibold mb-6">あなたへの予約リクエスト</h2>
+                    {hostRequests.length === 0 ? (
+                        <div className="text-center py-12 text-muted-foreground border border-dashed rounded-xl bg-muted/20">
+                            現在リクエストはありません。
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            {hostRequests.map(req => (
+                                <div key={req.id} className="p-4 border rounded-xl bg-card flex flex-col md:flex-row gap-4 items-center justify-between">
+                                    <div>
+                                        <h3 className="font-bold">{req.properties?.title || '不明な物件'}</h3>
+                                        <p className="text-sm">借り手: <span className="font-semibold">{req.users?.name || '不明'}</span></p>
+                                        <p className="text-sm text-muted-foreground">
+                                            {req.start_date} 〜 {req.end_date}
+                                        </p>
+                                        <p className="text-sm font-semibold text-primary mt-1">報酬予定: {req.total_price.toLocaleString()} LP</p>
+                                        <div className="mt-2">
+                                            <span className="px-2 py-1 text-xs rounded bg-secondary/50 font-medium border border-border">
+                                                ステータス: {req.status === 'pending' ? '承認待ち' : req.status === 'approved' ? '承認済' : req.status === 'completed' ? '完了' : req.status === 'cancelled' ? 'キャンセル済' : '却下済'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col gap-2 min-w-[140px]">
+                                        {req.status === 'pending' && (
+                                            <>
+                                                <Button variant="default" size="sm" onClick={() => handleApprove(req.id)} disabled={saving}>
+                                                    承認する
+                                                </Button>
+                                                <Button variant="outline" size="sm" onClick={() => handleReject(req.id)} disabled={saving} className="text-destructive border-destructive/50 hover:bg-destructive/10">
+                                                    却下する
+                                                </Button>
+                                            </>
+                                        )}
+                                        <Button variant="secondary" size="sm" asChild>
+                                            <a href={`/properties/${req.property_id}`}>物件を見る</a>
+                                        </Button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+
             {/* コンテンツ: ポイント履歴 */}
             {activeTab === "points" && (
                 <div className="max-w-3xl space-y-6">
@@ -375,6 +598,45 @@ export default function MyPage() {
                     )}
                 </div>
             )}
+
+            {/* コンテンツ: 通知 */}
+            {activeTab === "notifications" && (
+                <div className="max-w-3xl space-y-6">
+                    <h2 className="text-xl font-semibold">通知センター</h2>
+                    
+                    {notifications.length === 0 ? (
+                        <div className="text-center py-12 text-muted-foreground border border-dashed rounded-xl bg-muted/20">
+                            現在、新しい通知はありません。
+                        </div>
+                    ) : (
+                        <div className="space-y-3">
+                            {notifications.map((notif) => (
+                                <div 
+                                    key={notif.id} 
+                                    className={`p-4 border rounded-xl flex items-start gap-4 transition-colors ${notif.is_read ? 'bg-card opacity-70' : 'bg-primary/5 border-primary/20 cursor-pointer hover:bg-primary/10'}`}
+                                    onClick={() => !notif.is_read && handleMarkAsRead(notif.id, notif.link_url)}
+                                >
+                                    <div className={`mt-1 rounded-full p-2 ${notif.is_read ? 'bg-muted text-muted-foreground' : 'bg-primary/20 text-primary'}`}>
+                                        <Bell size={16} />
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="font-medium text-sm mb-1">{notif.message}</p>
+                                        <p className="text-xs text-muted-foreground">
+                                            {new Date(notif.created_at).toLocaleString('ja-JP')}
+                                        </p>
+                                    </div>
+                                    {notif.is_read && notif.link_url && (
+                                        <Button variant="ghost" size="sm" asChild>
+                                            <a href={notif.link_url}>確認する</a>
+                                        </Button>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 }
+

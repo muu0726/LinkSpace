@@ -226,6 +226,87 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 
+-- F. 予約キャンセル処理 (キャンセルポリシーの適用)
+CREATE OR REPLACE FUNCTION public.cancel_reservation(p_reservation_id UUID)
+RETURNS VOID AS $$
+DECLARE
+    v_reservation RECORD;
+    v_property_owner_id UUID;
+    v_diff_days INTEGER;
+    v_refund_amount INTEGER;
+    v_host_fee INTEGER;
+BEGIN
+    -- 予約情報の取得（行ロック）
+    SELECT r.*, p.owner_id INTO v_reservation
+    FROM public.reservations r
+    JOIN public.properties p ON r.property_id = p.id
+    WHERE r.id = p_reservation_id
+    FOR UPDATE OF r;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Reservation not found';
+    END IF;
+
+    -- すでに完了・キャンセルの場合はエラー
+    IF v_reservation.status NOT IN ('pending', 'approved') THEN
+        RAISE EXCEPTION 'Reservation cannot be cancelled from current status: %', v_reservation.status;
+    END IF;
+
+    v_property_owner_id := v_reservation.owner_id;
+
+    -- 日数差分の計算（日本時間を想定し、シンプルに日付の差分を取得）
+    v_diff_days := (v_reservation.start_date::date - CURRENT_DATE);
+    
+    IF v_reservation.status = 'pending' THEN
+        -- 承認前のリクエスト取り下げなら全額返金
+        v_refund_amount := v_reservation.total_price;
+        v_host_fee := 0;
+    ELSE
+        -- 承認済みの場合、キャンセルポリシー適用
+        IF v_diff_days >= 3 THEN
+            -- 3日前: 100%返金
+            v_refund_amount := v_reservation.total_price;
+            v_host_fee := 0;
+        ELSIF v_diff_days >= 1 THEN
+            -- 前日・2日前: 50%返金
+            v_refund_amount := (v_reservation.total_price * 0.5)::INTEGER;
+            v_host_fee := v_reservation.total_price - v_refund_amount;
+        ELSE
+            -- 当日以降: 0%返金
+            v_refund_amount := 0;
+            v_host_fee := v_reservation.total_price;
+        END IF;
+    END IF;
+
+    -- 借り手への返金処理
+    IF v_refund_amount > 0 THEN
+        UPDATE public.users
+        SET points_balance = points_balance + v_refund_amount
+        WHERE id = v_reservation.borrower_id;
+
+        INSERT INTO public.transactions (user_id, amount, type, reservation_id)
+        VALUES (v_reservation.borrower_id, v_refund_amount, 'refund', p_reservation_id);
+    END IF;
+
+    -- ホストへのキャンセル料加算（ペナルティ分）
+    IF v_host_fee > 0 THEN
+        UPDATE public.users
+        SET points_balance = points_balance + v_host_fee
+        WHERE id = v_property_owner_id;
+
+        INSERT INTO public.transactions (user_id, amount, type, reservation_id)
+        VALUES (v_property_owner_id, v_host_fee, 'reward', p_reservation_id);
+    END IF;
+
+    -- ステータスをキャンセルに更新
+    UPDATE public.reservations
+    SET status = 'cancelled', updated_at = NOW()
+    WHERE id = p_reservation_id;
+
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+
 -- ==========================================
 -- 5. 既存ユーザーへの 100,000 LP 一括付与マイグレーション
 -- ==========================================

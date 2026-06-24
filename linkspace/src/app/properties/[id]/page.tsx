@@ -3,6 +3,9 @@ import { createClient } from "@/lib/supabase/server";
 import { MapPin, Tag, ShieldAlert, User, Eye } from "lucide-react";
 import { PropertyCalendar } from "@/components/properties/PropertyCalendar";
 import { FavoriteButton } from "@/components/properties/FavoriteButton";
+import { PropertyReviews } from "@/components/properties/PropertyReviews";
+import { PropertyQA } from "@/components/properties/PropertyQA";
+
 
 export default async function PropertyDetailPage({ params }: { params: Promise<{ id: string }> }) {
     // URLの[id]がPromiseとして渡される場合があるのでawaitする（Next.js 15仕様対策）
@@ -171,7 +174,20 @@ export default async function PropertyDetailPage({ params }: { params: Promise<{
                             </div>
                         </section>
                     )}
+
+                    {/* レビュー */}
+                    <section className="pt-6 border-t">
+                        <h2 className="text-xl font-bold mb-6">レビュー</h2>
+                        <PropertyReviews propertyId={property.id} />
+                    </section>
+
+                    {/* Q&A */}
+                    <section className="pt-6 border-t">
+                        <h2 className="text-xl font-bold mb-6">Q&A</h2>
+                        <PropertyQA propertyId={property.id} isOwner={userId === property.owner_id} />
+                    </section>
                 </div>
+
 
                 {/* 右側: 予約カレンダー（サイドバー） */}
                 <div className="lg:col-span-1 relative">
