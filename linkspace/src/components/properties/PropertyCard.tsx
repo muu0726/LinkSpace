@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MapPin } from "lucide-react";
+import { MapPin, User as UserIcon } from "lucide-react";
 import { FavoriteButton } from "./FavoriteButton";
 
 interface Property {
@@ -10,6 +10,7 @@ interface Property {
   tags: string[];
   property_images?: { image_url: string }[];
   isFavorite?: boolean;
+  users?: { name: string; avatar_url: string | null } | null;
 }
 
 interface PropertyCardProps {
@@ -51,6 +52,19 @@ export function PropertyCard({ property }: PropertyCardProps) {
           <div className="flex items-center text-sm text-muted-foreground mb-3">
             <MapPin size={16} className="mr-1 flex-shrink-0" />
             <span className="truncate">{property.address}</span>
+          </div>
+
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-6 h-6 rounded-full bg-muted overflow-hidden flex items-center justify-center shrink-0 border">
+              {property.users?.avatar_url ? (
+                <img src={property.users.avatar_url} alt="Owner" className="w-full h-full object-cover" />
+              ) : (
+                <UserIcon size={14} className="text-muted-foreground" />
+              )}
+            </div>
+            <span className="text-sm font-medium text-muted-foreground truncate">
+              {property.users?.name || "ゲスト"}
+            </span>
           </div>
           
           {property.tags && property.tags.length > 0 && (

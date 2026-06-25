@@ -33,16 +33,46 @@ export async function updateUserProfile(formData: FormData) {
     }
 
     const fullName = formData.get("name") as string;
+    const avatarFile = formData.get("avatar") as File | null;
+    
+    let avatarUrl = undefined;
+
+    if (avatarFile && avatarFile.size > 0) {
+        const fileExt = avatarFile.name.split('.').pop();
+        const fileName = `${user.id}-${Math.random()}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage
+            .from('avatars')
+            .upload(fileName, avatarFile, { upsert: true });
+
+        if (uploadError) {
+            return { success: false, error: "画像アップロードに失敗しました: " + uploadError.message };
+        }
+
+        const { data: { publicUrl } } = supabase.storage
+            .from('avatars')
+            .getPublicUrl(fileName);
+            
+        avatarUrl = publicUrl;
+    }
     
     // Authのメタデータを更新
     await supabase.auth.updateUser({
-        data: { name: fullName }
+        data: { 
+            name: fullName,
+            ...(avatarUrl ? { avatar_url: avatarUrl } : {})
+        }
     });
 
     // DBのusersテーブルを更新
+    const updateData: any = { name: fullName };
+    if (avatarUrl) {
+        updateData.avatar_url = avatarUrl;
+    }
+
     const { error } = await supabase
         .from("users")
-        .update({ name: fullName })
+        .update(updateData)
         .eq("id", user.id);
 
     if (error) {

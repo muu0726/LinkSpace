@@ -8,15 +8,18 @@ export default async function Home({
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
-  // searchParamsからキーワードなどを抽出（Next.js 14以下での一般的な取得方法。15の場合はawait searchParamsが必要な場合がある）
-  // 念のため await searchParams をする (Next.js 15対応)
   const resolvedParams = await searchParams;
   const q = typeof resolvedParams?.q === 'string' ? resolvedParams.q : undefined;
   const area = typeof resolvedParams?.area === 'string' ? resolvedParams.area : undefined;
   const tag = typeof resolvedParams?.tag === 'string' ? resolvedParams.tag : undefined;
+  
+  const minLat = typeof resolvedParams?.minLat === 'string' ? parseFloat(resolvedParams.minLat) : undefined;
+  const maxLat = typeof resolvedParams?.maxLat === 'string' ? parseFloat(resolvedParams.maxLat) : undefined;
+  const minLng = typeof resolvedParams?.minLng === 'string' ? parseFloat(resolvedParams.minLng) : undefined;
+  const maxLng = typeof resolvedParams?.maxLng === 'string' ? parseFloat(resolvedParams.maxLng) : undefined;
 
   // Suspenseのkeyにパラメータを含めることで、検索条件が変わるたびに再フェッチ・スケルトン表示させる
-  const suspenseKey = `${q}-${area}-${tag}`;
+  const suspenseKey = `${q}-${area}-${tag}-${minLat}-${maxLat}-${minLng}-${maxLng}`;
 
   return (
     <div className="min-h-screen bg-background">
@@ -48,7 +51,15 @@ export default async function Home({
             ))}
           </div>
         }>
-          <PropertyList q={q} area={area} tag={tag} />
+          <PropertyList 
+            q={q} 
+            area={area} 
+            tag={tag} 
+            minLat={minLat}
+            maxLat={maxLat}
+            minLng={minLng}
+            maxLng={maxLng}
+          />
         </Suspense>
       </section>
     </div>

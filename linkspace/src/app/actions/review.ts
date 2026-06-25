@@ -4,8 +4,6 @@ import { createClient } from "@/lib/supabase/server";
 
 export async function submitReview(
     reservationId: string,
-    revieweeId: string,
-    propertyId: string | null,
     rating: number,
     comment: string
 ) {
@@ -14,6 +12,29 @@ export async function submitReview(
 
     if (authError || !user) {
         return { success: false, error: "ログインが必要です" };
+    }
+
+    const { data: reservation, error: resError } = await supabase
+        .from('reservations')
+        .select(`
+            borrower_id, 
+            property_id, 
+            properties ( owner_id )
+        `)
+        .eq('id', reservationId)
+        .single();
+        
+    if (resError || !reservation) {
+        return { success: false, error: "予約情報が見つかりません" };
+    }
+
+    let revieweeId = "";
+    if (user.id === reservation.borrower_id) {
+        revieweeId = reservation.properties.owner_id;
+    } else if (user.id === reservation.properties.owner_id) {
+        revieweeId = reservation.borrower_id;
+    } else {
+        return { success: false, error: "レビュー権限がありません" };
     }
 
     // すでに同じ予約に対してレビュー済みかチェック（必要に応じて）
@@ -34,7 +55,7 @@ export async function submitReview(
             reservation_id: reservationId,
             reviewer_id: user.id,
             reviewee_id: revieweeId,
-            property_id: propertyId,
+            property_id: reservation.property_id,
             rating,
             comment
         }]);

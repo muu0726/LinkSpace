@@ -4,11 +4,19 @@ import { PropertyViewContainer } from "./PropertyViewContainer";
 export async function PropertyList({ 
     q, 
     area, 
-    tag 
+    tag,
+    minLat,
+    maxLat,
+    minLng,
+    maxLng
 }: { 
     q?: string, 
     area?: string, 
-    tag?: string 
+    tag?: string,
+    minLat?: number,
+    maxLat?: number,
+    minLng?: number,
+    maxLng?: number
 }) {
     const supabase = await createClient();
 
@@ -21,6 +29,9 @@ export async function PropertyList({
             address,
             price_per_day,
             tags,
+            latitude,
+            longitude,
+            owner_id,
             property_images(image_url)
         `)
         .eq('is_published', true);
@@ -39,6 +50,15 @@ export async function PropertyList({
     // Supabase JSでの配列フィルタは `cs` (contains) を使用
     if (tag) {
         query = query.contains('tags', [tag]);
+    }
+
+    // 範囲検索
+    if (minLat !== undefined && maxLat !== undefined && minLng !== undefined && maxLng !== undefined) {
+        query = query
+            .gte('latitude', minLat)
+            .lte('latitude', maxLat)
+            .gte('longitude', minLng)
+            .lte('longitude', maxLng);
     }
 
     // 作成日の降順でソート
@@ -68,10 +88,28 @@ export async function PropertyList({
         }
     }
 
-    // propertiesにisFavoriteフラグを付与
+    // オーナー情報を取得して紐付け
+    let usersMap: Record<string, { name: string, avatar_url: string | null }> = {};
+    if (properties && properties.length > 0) {
+        const ownerIds = [...new Set(properties.map(p => p.owner_id))];
+        const { data: owners } = await supabase
+            .from('users')
+            .select('id, name, avatar_url')
+            .in('id', ownerIds);
+            
+        if (owners) {
+            usersMap = owners.reduce((acc, curr) => {
+                acc[curr.id] = { name: curr.name, avatar_url: curr.avatar_url };
+                return acc;
+            }, {} as Record<string, { name: string, avatar_url: string | null }>);
+        }
+    }
+
+    // propertiesにisFavoriteフラグとusers情報を付与
     const propertiesWithFavorites = properties?.map(p => ({
         ...p,
-        isFavorite: !!favoritesMap[p.id]
+        isFavorite: !!favoritesMap[p.id],
+        users: usersMap[p.owner_id] || null
     })) || [];
 
     return <PropertyViewContainer properties={propertiesWithFavorites} />;

@@ -6,6 +6,8 @@ import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import Link from "next/link";
 import { MapPin } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
 
 // Leafletのデフォルトアイコンのパス問題を修正
 const iconRetinaUrl = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png';
@@ -39,6 +41,43 @@ function MapBounds({ properties }: { properties: any[] }) {
     }, [map, properties]);
 
     return null;
+}
+
+function SearchAreaButton() {
+    const map = useMap();
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const [loading, setLoading] = useState(false);
+
+    const handleSearch = () => {
+        setLoading(true);
+        const bounds = map.getBounds();
+        const minLat = bounds.getSouth();
+        const maxLat = bounds.getNorth();
+        const minLng = bounds.getWest();
+        const maxLng = bounds.getEast();
+
+        const params = new URLSearchParams(searchParams.toString());
+        params.set('minLat', minLat.toString());
+        params.set('maxLat', maxLat.toString());
+        params.set('minLng', minLng.toString());
+        params.set('maxLng', maxLng.toString());
+
+        router.push(`/?${params.toString()}`, { scroll: false });
+        setTimeout(() => setLoading(false), 1000);
+    };
+
+    return (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] leaflet-control">
+            <button 
+                onClick={handleSearch}
+                disabled={loading}
+                className="bg-white/90 backdrop-blur-md px-4 py-2 rounded-full shadow-md font-bold text-sm text-primary hover:bg-white transition-colors border border-primary/20 pointer-events-auto"
+            >
+                {loading ? "検索中..." : "このエリアで検索"}
+            </button>
+        </div>
+    );
 }
 
 interface Property {
@@ -100,6 +139,7 @@ export default function PropertyMap({ properties }: { properties: Property[] }) 
                 })}
                 
                 <MapBounds properties={properties} />
+                <SearchAreaButton />
             </MapContainer>
 
             {/* z-indexの調整用CSS */}

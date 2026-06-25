@@ -6,11 +6,11 @@ import { getReservationsAsRenter, getReservationsAsHost, cancelReservation, appr
 import { getNotifications, markAsRead } from "@/app/actions/notification";
 import { Button } from "@/components/ui/button";
 import { PropertyCard } from "@/components/properties/PropertyCard";
-import { Bell } from "lucide-react";
+import { Bell, User as UserIcon } from "lucide-react";
 
 export default function MyPage() {
     const [activeTab, setActiveTab] = useState<"profile" | "favorites" | "properties" | "reservations" | "requests" | "points" | "notifications">("profile");
-    const [profile, setProfile] = useState<{ name?: string; points_balance?: number } | null>(null);
+    const [profile, setProfile] = useState<{ name?: string; points_balance?: number; avatar_url?: string | null } | null>(null);
     const [notifications, setNotifications] = useState<any[]>([]);
 
     const [favorites, setFavorites] = useState<any[]>([]);
@@ -40,6 +40,7 @@ export default function MyPage() {
                     address,
                     price_per_day,
                     tags,
+                    owner_id,
                     property_images (image_url)
                 )
             `)
@@ -52,6 +53,27 @@ export default function MyPage() {
                 ...(f.properties as any),
                 isFavorite: true
             }));
+
+            // オーナー情報の取得とマージ
+            const ownerIds = [...new Set(formatted.map(p => p.owner_id))].filter(Boolean);
+            if (ownerIds.length > 0) {
+                const { data: owners } = await supabase
+                    .from("users")
+                    .select("id, name, avatar_url")
+                    .in("id", ownerIds);
+                
+                if (owners) {
+                    const usersMap = owners.reduce((acc, curr) => {
+                        acc[curr.id] = { name: curr.name, avatar_url: curr.avatar_url };
+                        return acc;
+                    }, {} as Record<string, { name: string, avatar_url: string | null }>);
+                    
+                    formatted.forEach(p => {
+                        p.users = usersMap[p.owner_id] || null;
+                    });
+                }
+            }
+
             setFavorites(formatted);
         }
     };
@@ -71,13 +93,23 @@ export default function MyPage() {
                 price_per_day,
                 tags,
                 is_published,
+                owner_id,
                 property_images (image_url)
             `)
             .eq("owner_id", session.session.user.id)
             .order("created_at", { ascending: false });
 
         if (data) {
-            setOwnedProperties(data);
+            // 自分の物件なのでオーナー情報はログインユーザー
+            const ownerInfo = {
+                name: profile?.name || session.session.user.user_metadata?.full_name || "ゲスト",
+                avatar_url: profile?.avatar_url || session.session.user.user_metadata?.avatar_url || null
+            };
+            const propertiesWithOwner = data.map(p => ({
+                ...p,
+                users: ownerInfo
+            }));
+            setOwnedProperties(propertiesWithOwner);
         }
     };
 
@@ -303,8 +335,32 @@ export default function MyPage() {
                     </div>
 
                     <div className="rounded-xl border bg-card p-6 shadow-sm">
-                        <h2 className="text-xl font-semibold mb-4">プロフィール編集</h2>
-                        <form onSubmit={handleUpdate} className="space-y-4">
+                        <h2 className="text-xl font-semibold mb-6">プロフィール編集</h2>
+                        <form onSubmit={handleUpdate} className="space-y-6">
+                            
+                            <div className="flex flex-col sm:flex-row items-center gap-6">
+                                <div className="relative w-24 h-24 rounded-full overflow-hidden bg-muted border flex items-center justify-center shrink-0">
+                                    {profile?.avatar_url ? (
+                                        <img src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <UserIcon size={48} className="text-muted-foreground/50" />
+                                    )}
+                                </div>
+                                <div className="space-y-2 flex-1 w-full">
+                                    <label className="text-sm font-medium" htmlFor="avatar">
+                                        プロフィール画像
+                                    </label>
+                                    <input
+                                        id="avatar"
+                                        name="avatar"
+                                        type="file"
+                                        accept="image/*"
+                                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                    />
+                                    <p className="text-xs text-muted-foreground">※変更する場合のみ選択してください</p>
+                                </div>
+                            </div>
+
                             <div className="space-y-2">
                                 <label className="text-sm font-medium" htmlFor="name">
                                     お名前 (表示名)
@@ -317,6 +373,7 @@ export default function MyPage() {
                                     required
                                 />
                             </div>
+                            
                             {message && (
                                 <p className={`text-sm ${message.startsWith("エラー") ? "text-destructive" : "text-green-600"}`}>
                                     {message}
@@ -465,6 +522,13 @@ export default function MyPage() {
                                                 </a>
                                             </Button>
                                         )}
+                                        {res.status === 'completed' && (
+                                            <Button variant="default" size="sm" asChild className="bg-green-600 hover:bg-green-700">
+                                                <a href={`/mypage/reservations/${res.id}/review`}>
+                                                    レビューを投稿
+                                                </a>
+                                            </Button>
+                                        )}
                                         <Button variant="secondary" size="sm" asChild>
                                             <a href={`/properties/${res.property_id}`}>物件を見る</a>
                                         </Button>
@@ -511,6 +575,13 @@ export default function MyPage() {
                                                     却下する
                                                 </Button>
                                             </>
+                                        )}
+                                        {req.status === 'completed' && (
+                                            <Button variant="default" size="sm" asChild className="bg-green-600 hover:bg-green-700">
+                                                <a href={`/mypage/reservations/${req.id}/review`}>
+                                                    ゲストをレビュー
+                                                </a>
+                                            </Button>
                                         )}
                                         <Button variant="secondary" size="sm" asChild>
                                             <a href={`/properties/${req.property_id}`}>物件を見る</a>
