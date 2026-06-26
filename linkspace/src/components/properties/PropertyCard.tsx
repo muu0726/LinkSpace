@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { MapPin, User as UserIcon } from "lucide-react";
 import { FavoriteButton } from "./FavoriteButton";
 
@@ -37,10 +38,12 @@ export function PropertyCard({ property }: PropertyCardProps) {
       <Link href={`/properties/${property.id}`} className="group block h-full">
         <div className="flex flex-col h-full rounded-xl border bg-card text-card-foreground shadow-sm overflow-hidden hover:shadow-md transition-shadow">
           <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted">
-            <img
+            <Image
               src={imageUrl}
               alt={property.title}
-              className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300"
+              fill
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              className="object-cover group-hover:scale-105 transition-transform duration-300"
             />
           </div>
           <div className="flex flex-col flex-1 p-4">
@@ -57,7 +60,9 @@ export function PropertyCard({ property }: PropertyCardProps) {
           <div className="flex items-center gap-2 mb-4">
             <div className="w-6 h-6 rounded-full bg-muted overflow-hidden flex items-center justify-center shrink-0 border">
               {property.users?.avatar_url ? (
-                <img src={property.users.avatar_url} alt="Owner" className="w-full h-full object-cover" />
+                <div className="relative w-full h-full">
+                  <Image src={property.users.avatar_url} alt="Owner" fill sizes="24px" className="object-cover" />
+                </div>
               ) : (
                 <UserIcon size={14} className="text-muted-foreground" />
               )}

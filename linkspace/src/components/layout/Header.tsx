@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { User } from "@supabase/supabase-js";
 import { Bell } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export function Header() {
     const [user, setUser] = useState<User | null>(null);
@@ -104,6 +105,7 @@ export function Header() {
                             <Button>ログイン / 登録</Button>
                         </Link>
                     )}
+                    <ThemeToggle />
                 </nav>
             </div>
         </header>

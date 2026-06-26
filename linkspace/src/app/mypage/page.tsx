@@ -10,7 +10,7 @@ import { Bell, User as UserIcon } from "lucide-react";
 
 export default function MyPage() {
     const [activeTab, setActiveTab] = useState<"profile" | "favorites" | "properties" | "reservations" | "requests" | "points" | "notifications">("profile");
-    const [profile, setProfile] = useState<{ name?: string; points_balance?: number; avatar_url?: string | null } | null>(null);
+    const [profile, setProfile] = useState<{ name?: string; email?: string; points_balance?: number; avatar_url?: string | null } | null>(null);
     const [notifications, setNotifications] = useState<any[]>([]);
 
     const [favorites, setFavorites] = useState<any[]>([]);
@@ -372,6 +372,16 @@ export default function MyPage() {
                                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                     required
                                 />
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">
+                                    登録メールアドレス
+                                </label>
+                                <div className="flex h-10 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm text-muted-foreground items-center">
+                                    {profile?.email || "未登録"}
+                                </div>
+                                <p className="text-xs text-muted-foreground">※メールアドレスの変更は現在サポートされていません</p>
                             </div>
                             
                             {message && (
