@@ -10,7 +10,7 @@ import { Bell, User as UserIcon } from "lucide-react";
 
 export default function MyPage() {
     const [activeTab, setActiveTab] = useState<"profile" | "favorites" | "properties" | "reservations" | "requests" | "points" | "notifications">("profile");
-    const [profile, setProfile] = useState<{ name?: string; email?: string; points_balance?: number; avatar_url?: string | null } | null>(null);
+    const [profile, setProfile] = useState<{ name?: string; email?: string; points_balance?: number; avatar_url?: string | null; bio?: string } | null>(null);
     const [notifications, setNotifications] = useState<any[]>([]);
 
     const [favorites, setFavorites] = useState<any[]>([]);
@@ -371,6 +371,19 @@ export default function MyPage() {
                                     defaultValue={profile?.name || ""}
                                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                     required
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium" htmlFor="bio">
+                                    自己紹介
+                                </label>
+                                <textarea
+                                    id="bio"
+                                    name="bio"
+                                    defaultValue={profile?.bio || ""}
+                                    placeholder="趣味や利用目的など、自由に自己紹介を書いてください。"
+                                    className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                 />
                             </div>
 

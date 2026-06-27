@@ -2,6 +2,8 @@ import { Suspense } from "react";
 import { PropertyList } from "@/components/properties/PropertyList";
 import { PropertyCardSkeleton } from "@/components/properties/PropertyCardSkeleton";
 import { SearchBar } from "@/components/properties/SearchBar";
+import { HeroSlideshow } from "@/components/ui/HeroSlideshow";
+import { FadeInScroll } from "@/components/ui/FadeInScroll";
 
 export default async function Home({
   searchParams,
@@ -24,43 +26,43 @@ export default async function Home({
   return (
     <div className="min-h-screen bg-background">
       {/* ヒーローセクション */}
-      <section className="bg-primary/5 py-16 px-6 text-center">
-        <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-6">
-          眠っている土地を、地域の資産に。
-        </h1>
-        <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
-          LinkSpaceは、使われていない空き家や空き地を、キャンプや農園、駐車場として簡単に貸し借りできるプラットフォームです。
-        </p>
-        
-        {/* 検索バー */}
-        <SearchBar />
+      <section className="relative py-24 px-6 text-center overflow-hidden flex flex-col items-center justify-center min-h-[400px]">
+        <HeroSlideshow />
+        <div className="relative z-10 w-full max-w-4xl mx-auto">
+          {/* 検索バー */}
+          <div className="bg-background/95 backdrop-blur rounded-2xl p-4 shadow-xl">
+            <SearchBar />
+          </div>
+        </div>
       </section>
 
       {/* 物件一覧セクション */}
       <section className="container mx-auto px-4 py-12">
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-2xl font-bold tracking-tight">
-            {q || area || tag ? "検索結果" : "新着物件"}
-          </h2>
-        </div>
-        
-        <Suspense key={suspenseKey} fallback={
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <PropertyCardSkeleton key={i} />
-            ))}
+        <FadeInScroll>
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-2xl font-bold tracking-tight">
+              {q || area || tag ? "検索結果" : "新着物件"}
+            </h2>
           </div>
-        }>
-          <PropertyList 
-            q={q} 
-            area={area} 
-            tag={tag} 
-            minLat={minLat}
-            maxLat={maxLat}
-            minLng={minLng}
-            maxLng={maxLng}
-          />
-        </Suspense>
+          
+          <Suspense key={suspenseKey} fallback={
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <PropertyCardSkeleton key={i} />
+              ))}
+            </div>
+          }>
+            <PropertyList 
+              q={q} 
+              area={area} 
+              tag={tag} 
+              minLat={minLat}
+              maxLat={maxLat}
+              minLng={minLng}
+              maxLng={maxLng}
+            />
+          </Suspense>
+        </FadeInScroll>
       </section>
     </div>
   );

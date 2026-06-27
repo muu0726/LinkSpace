@@ -135,3 +135,20 @@
     @apply font-sans;
   }
 }
+
+.animate-float-up {
+  animation-name: floatUp;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  animation-fill-mode: both;
+}
+
+@keyframes floatUp {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    /* 画面の高さ(100vh) + 初期位置のマイナス分と画像の最大高さ分(約1500px) を確実に超える距離を移動させる */
+    transform: translateY(calc(-100vh - 1500px)); 
+  }
+}

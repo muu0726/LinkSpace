@@ -5,7 +5,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { User } from "@supabase/supabase-js";
-import { Bell } from "lucide-react";
+import { User as UserIcon } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 export function Header() {
@@ -87,8 +87,9 @@ export function Header() {
                             </Link>
                             <Link href="/mypage">
                                 <Button variant="ghost" className="relative flex items-center gap-2">
-                                    <Bell size={18} />
-                                    {unreadCount > 0 && (
+                                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center overflow-hidden">
+                                        <UserIcon size={18} />
+                                    </div>{unreadCount > 0 && (
                                         <span className="absolute top-1 left-4 bg-destructive text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full">
                                             {unreadCount}
                                         </span>

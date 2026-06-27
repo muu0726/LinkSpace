@@ -36,14 +36,14 @@ export function PropertyCard({ property }: PropertyCardProps) {
       </div>
 
       <Link href={`/properties/${property.id}`} className="group block h-full">
-        <div className="flex flex-col h-full rounded-xl border bg-card text-card-foreground shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+        <div className="flex flex-col h-full rounded-xl border bg-card text-card-foreground shadow-sm overflow-hidden hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300">
           <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted">
             <Image
               src={imageUrl}
               alt={property.title}
               fill
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-              className="object-cover group-hover:scale-105 transition-transform duration-300"
+              className="object-cover group-hover:scale-110 transition-transform duration-500 ease-out"
             />
           </div>
           <div className="flex flex-col flex-1 p-4">

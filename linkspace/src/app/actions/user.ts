@@ -33,6 +33,7 @@ export async function updateUserProfile(formData: FormData) {
     }
 
     const fullName = formData.get("name") as string;
+    const bio = formData.get("bio") as string;
     const avatarFile = formData.get("avatar") as File | null;
     
     let avatarUrl = undefined;
@@ -66,6 +67,9 @@ export async function updateUserProfile(formData: FormData) {
 
     // DBのusersテーブルを更新
     const updateData: any = { name: fullName };
+    if (bio !== null && bio !== undefined) {
+        updateData.bio = bio;
+    }
     if (avatarUrl) {
         updateData.avatar_url = avatarUrl;
     }

@@ -140,7 +140,7 @@ export default async function PropertyDetailPage({ params }: { params: Promise<{
                 <div className="lg:col-span-2 space-y-10">
                     
                     {/* ホスト情報 */}
-                    <div className="flex items-center gap-4 pb-8 border-b">
+                    <a href={`/users/${property.owner_id}`} className="flex items-center gap-4 pb-8 border-b hover:bg-muted/30 transition-colors p-4 -mx-4 rounded-xl">
                         <div className="w-14 h-14 rounded-full bg-muted overflow-hidden flex items-center justify-center shrink-0">
                             {ownerAvatar ? (
                                 <img src={ownerAvatar} alt={ownerName} className="w-full h-full object-cover" />
@@ -149,10 +149,10 @@ export default async function PropertyDetailPage({ params }: { params: Promise<{
                             )}
                         </div>
                         <div>
-                            <h3 className="font-bold text-lg">ホスト: {ownerName} さん</h3>
-                            <p className="text-sm text-muted-foreground">認証済みユーザー</p>
+                            <h3 className="font-bold text-lg hover:underline decoration-primary underline-offset-4">ホスト: {ownerName} さん</h3>
+                            <p className="text-sm text-muted-foreground">プロフィールを見る</p>
                         </div>
-                    </div>
+                    </a>
 
                     {/* 説明文 */}
                     <section>
